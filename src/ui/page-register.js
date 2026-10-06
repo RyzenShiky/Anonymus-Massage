@@ -1,8 +1,8 @@
-import "/src/firebase/app.js";
-    import { registerEmail } from "/src/firebase/auth.js";
-    import { createOrUpdateProfile } from "/src/features/profile/profile.service.js";
-    import { isValidUsername, toUsername, isReservedUsername } from "/src/core/utilities/slug.js";
-    import { initSession } from "/src/auth/session/session.js";
+import "../firebase/app.js";
+    import { registerEmail } from "../firebase/auth.js";
+    import { createOrUpdateProfile } from "../features/profile/profile.service.js";
+    import { isValidUsername, toUsername, isReservedUsername } from "../core/utilities/slug.js";
+    import { initSession } from "../auth/session/session.js";
     initSession();
     const err = document.getElementById("err");
     document.getElementById("form").addEventListener("submit", async (e) => {

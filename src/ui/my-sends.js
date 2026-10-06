@@ -1,12 +1,12 @@
-import "/src/firebase/app.js";
-import { ensureSenderAnonymous, getSenderDb } from "/src/firebase/sender-app.js";
+import "../firebase/app.js";
+import { ensureSenderAnonymous, getSenderDb } from "../firebase/sender-app.js";
 import {
   listLocalSecrets,
   watchThreadMessages,
   sendThreadMessage,
   getThread,
-} from "/src/features/conversations/thread.service.js";
-import { toast } from "/src/core/utilities/toast.js";
+} from "../features/conversations/thread.service.js";
+import { toast } from "../core/utilities/toast.js";
 
 const list = document.getElementById("list");
 

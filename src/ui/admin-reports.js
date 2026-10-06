@@ -1,6 +1,6 @@
-import "/src/firebase/app.js";
-import { initSession, whenReady } from "/src/auth/session/session.js";
-import { db, collection, query, orderBy, limit, onSnapshot } from "/src/firebase/firestore.js";
+import "../firebase/app.js";
+import { initSession, whenReady } from "../auth/session/session.js";
+import { db, collection, query, orderBy, limit, onSnapshot } from "../firebase/firestore.js";
 
 initSession();
 document.getElementById("hint").textContent =

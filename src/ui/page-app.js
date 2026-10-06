@@ -1,15 +1,15 @@
-import "/src/firebase/app.js";
-    import { initSession, onSession, whenReady, logout, getUser, getProfile } from "/src/auth/session/session.js";
-    import { watchInbox, markRead, setReaction, softDeleteMessage, hardDeleteMessage } from "/src/features/messages/message.service.js";
-    import { reportContent } from "/src/safety/reporting/report.service.js";
-    import { publicLink, createOrUpdateProfile } from "/src/features/profile/profile.service.js";
-    import { toast } from "/src/core/utilities/toast.js";
+import "../firebase/app.js";
+    import { initSession, onSession, whenReady, logout, getUser, getProfile } from "../auth/session/session.js";
+    import { watchInbox, markRead, setReaction, softDeleteMessage, hardDeleteMessage } from "../features/messages/message.service.js";
+    import { reportContent } from "../safety/reporting/report.service.js";
+    import { publicLink, createOrUpdateProfile } from "../features/profile/profile.service.js";
+    import { toast } from "../core/utilities/toast.js";
     // conversations index disabled — use message.threadSecret
-    import { watchThreadMessages, sendThreadMessage } from "/src/features/conversations/thread.service.js";
+    import { watchThreadMessages, sendThreadMessage } from "../features/conversations/thread.service.js";
         
     
-    import { requestNotificationPermission } from "/src/infrastructure/notifications/fcm.client.js";
-    import { initAppCheckStub } from "/src/infrastructure/app-check/app-check.client.js";
+    import { requestNotificationPermission } from "../infrastructure/notifications/fcm.client.js";
+    import { initAppCheckStub } from "../infrastructure/app-check/app-check.client.js";
     initAppCheckStub();
 
     initSession();
@@ -111,7 +111,7 @@ import "/src/firebase/app.js";
                   const answer = prompt("Jawabanmu?");
                   if (!answer) return;
                   const row = items.find((x) => x.id === id);
-                  const { renderStoryCard, shareCard } = await import("/src/features/share/story-card.js");
+                  const { renderStoryCard, shareCard } = await import("../features/share/story-card.js");
                   const blob = await renderStoryCard({
                     question: row?.body || "",
                     answer,
@@ -199,9 +199,9 @@ import "/src/firebase/app.js";
         const password = prompt("Password (min 6)");
         if (!email || !password) return;
         try {
-          const { linkEmailPassword } = await import("/src/auth/authentication/guest.js");
+          const { linkEmailPassword } = await import("../auth/authentication/guest.js");
           await linkEmailPassword(email, password);
-          const { createOrUpdateProfile } = await import("/src/features/profile/profile.service.js");
+          const { createOrUpdateProfile } = await import("../features/profile/profile.service.js");
           await createOrUpdateProfile(getUser().uid, { username: getProfile().username, isGuest: false });
           toast("Account linked — inbox kept");
         } catch (e) { toast(e.message); }

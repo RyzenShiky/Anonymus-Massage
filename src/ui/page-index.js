@@ -1,6 +1,6 @@
-import "/src/firebase/app.js";
-    import { initSession, onSession } from "/src/auth/session/session.js";
-    import { continueAsGuest } from "/src/auth/authentication/guest.js";
+import "../firebase/app.js";
+    import { initSession, onSession } from "../auth/session/session.js";
+    import { continueAsGuest } from "../auth/authentication/guest.js";
     initSession();
     onSession((user, profile) => {
       if (user && profile?.username) location.replace("app.html");

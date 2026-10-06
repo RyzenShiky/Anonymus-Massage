@@ -1,10 +1,10 @@
-import "/src/firebase/app.js"; // App Check init
-    import { getProfileByUsername } from "/src/features/profile/profile.service.js";
-    import { sendAnonymousMessage } from "/src/features/messages/message.service.js";
-    import { localToxicityCheck, makeAnonSessionId } from "/src/safety/filtering/local-filter.js";
-    import { analyzeText } from "/src/wasm/text-engine/runtime/adapter.js";
-    import { toast } from "/src/core/utilities/toast.js";
-    import { toUsername } from "/src/core/utilities/slug.js";
+import "../firebase/app.js"; // App Check init
+    import { getProfileByUsername } from "../features/profile/profile.service.js";
+    import { sendAnonymousMessage } from "../features/messages/message.service.js";
+    import { localToxicityCheck, makeAnonSessionId } from "../safety/filtering/local-filter.js";
+    import { analyzeText } from "../wasm/text-engine/runtime/adapter.js";
+    import { toast } from "../core/utilities/toast.js";
+    import { toUsername } from "../core/utilities/slug.js";
 
     function safeHex(c) {
       return /^#[0-9a-fA-F]{6}$/.test(c || "") ? c : "#5b5ce2";

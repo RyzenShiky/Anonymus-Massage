@@ -1,8 +1,8 @@
-import "/src/firebase/app.js";
-    import { loginEmail, loginGoogle } from "/src/firebase/auth.js";
-    import { continueAsGuest } from "/src/auth/authentication/guest.js";
-    import { initSession } from "/src/auth/session/session.js";
-    import { getProfileByUid } from "/src/features/profile/profile.service.js";
+import "../firebase/app.js";
+    import { loginEmail, loginGoogle } from "../firebase/auth.js";
+    import { continueAsGuest } from "../auth/authentication/guest.js";
+    import { initSession } from "../auth/session/session.js";
+    import { getProfileByUid } from "../features/profile/profile.service.js";
     initSession();
     const err = document.getElementById("err");
     function show(m) { err.textContent = m; err.classList.add("show"); }

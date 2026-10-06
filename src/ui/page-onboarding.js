@@ -1,7 +1,7 @@
-import "/src/firebase/app.js";
-    import { initSession, whenReady, getUser } from "/src/auth/session/session.js";
-    import { createOrUpdateProfile } from "/src/features/profile/profile.service.js";
-    import { isValidUsername, toUsername, isReservedUsername } from "/src/core/utilities/slug.js";
+import "../firebase/app.js";
+    import { initSession, whenReady, getUser } from "../auth/session/session.js";
+    import { createOrUpdateProfile } from "../features/profile/profile.service.js";
+    import { isValidUsername, toUsername, isReservedUsername } from "../core/utilities/slug.js";
     initSession();
     whenReady().then(({ user }) => { if (!user) location.href = "login.html"; });
     document.getElementById("go").addEventListener("click", async () => {
