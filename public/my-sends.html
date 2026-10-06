@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My sent threads</title>
+  <link rel="stylesheet" href="/styles/tokens/tokens.css" />
+  <link rel="stylesheet" href="/styles/foundation/base.css" />
+  <link rel="stylesheet" href="/styles/components/ui.css" />
+  <link rel="stylesheet" href="/styles/layouts/shell.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="topbar-brand" href="index.html">anon<span>msg</span></a>
+  </header>
+  <main class="content" id="main">
+    <h1 class="page-title">Threads you started</h1>
+    <p style="color:var(--text-3);font-size:0.85rem;margin-bottom:16px">
+      Secrets disimpan di browser ini. Jika data browser dihapus, akses pengirim hilang.
+    </p>
+    <div id="list"></div>
+  </main>
+  <script type="module" src="/src/ui/my-sends.js"></script>
+</body>
+</html>

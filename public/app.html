@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#5b5ce2" />
+  <link rel="icon" href="data:," />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <title>Inbox — anonmsg</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles/tokens/tokens.css" />
+  <link rel="stylesheet" href="/styles/foundation/base.css" />
+  <link rel="stylesheet" href="/styles/components/ui.css" />
+  <link rel="stylesheet" href="/styles/layouts/shell.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-brand">anon<span>msg</span></div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost btn-sm" id="btn-theme" type="button" title="Theme">◐</button>
+        <div class="avatar" id="me-avatar">?</div>
+      </div>
+    </header>
+    <div class="main-wrap">
+      <nav class="sidebar" id="sidebar">
+        <a href="#inbox" data-route="inbox" class="active">Inbox</a>
+        <a href="#conversations" data-route="conversations">Chats</a>
+        <a href="#link" data-route="link">My link</a>
+        <a href="#settings" data-route="settings">Settings</a>
+        <a href="#safety" data-route="safety">Safety</a>
+        <div style="flex:1"></div>
+        <a href="#" id="logout">Log out</a>
+      </nav>
+      <main class="content" id="view"></main>
+    </div>
+    <nav class="bottom-nav">
+      <a href="#inbox" data-route="inbox" class="active"><span class="nav-icon">📥</span>Inbox</a>
+      <a href="#conversations" data-route="conversations"><span class="nav-icon">💬</span>Chats</a>
+      <a href="#link" data-route="link"><span class="nav-icon">🔗</span>Link</a>
+      <a href="#settings" data-route="settings"><span class="nav-icon">⚙️</span>Me</a>
+    </nav>
+  </div>
+  <script type="module" src="/src/ui/page-app.js"></script>
+</body>
+</html>

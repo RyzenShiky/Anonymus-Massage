@@ -1,0 +1,280 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function validUsername(u) {
+      return u is string && u.matches('^[a-z0-9_]{3,24}$');
+    }
+    function validHexColor(c) {
+      return c is string && c.matches('^#[0-9a-fA-F]{6}$');
+    }
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function validSecret(s) {
+      return s is string && s.matches('^[a-f0-9]{32}$');
+    }
+    function reservedUsername(u) {
+      return u in ['admin', 'administrator', 'support', 'help', 'anonmsg', 'official',
+                   'mod', 'moderator', 'system', 'root', 'null', 'undefined', 'api',
+                   'login', 'register', 'settings', 'inbox', 'security', 'privacy'];
+    }
+
+    match /admins/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+    }
+
+    match /usernames/{name} {
+      allow get: if signedIn();
+      allow list: if false;
+      // Must be same batch as users/{uid} with matching username (one claim per account)
+      allow create: if signedIn()
+        && validUsername(name)
+        && !reservedUsername(name)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == name
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && request.resource.data.uid == uid
+        && validUsername(request.resource.data.username)
+        && existsAfter(/databases/$(database)/documents/usernames/$(request.resource.data.username))
+        && getAfter(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid == uid;
+      allow update: if isOwner(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.username == resource.data.username
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40
+        && request.resource.data.bio is string
+        && request.resource.data.bio.size() <= 200
+        && (!('avatarColor' in request.resource.data)
+            || validHexColor(request.resource.data.avatarColor));
+      allow delete: if false; // account deletion must be controlled (future admin/Function path)
+    }
+
+    match /publicProfiles/{username} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if signedIn()
+        && validUsername(username)
+        && !reservedUsername(username)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.username == username
+        && existsAfter(/databases/$(database)/documents/usernames/$(username))
+        && getAfter(/databases/$(database)/documents/usernames/$(username)).data.uid == request.auth.uid
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40
+        && request.resource.data.bio is string
+        && request.resource.data.bio.size() <= 200
+        && (!('avatarColor' in request.resource.data)
+            || validHexColor(request.resource.data.avatarColor));
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.username == resource.data.username
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40
+        && request.resource.data.bio is string
+        && request.resource.data.bio.size() <= 200
+        && (!('avatarColor' in request.resource.data)
+            || validHexColor(request.resource.data.avatarColor));
+      allow delete: if false;
+    }
+
+    match /userSettings/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    match /rateLimits/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['lastSent', 'count'])
+        && request.resource.data.lastSent == request.time;
+      allow update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['lastSent', 'count'])
+        && request.resource.data.lastSent == request.time
+        && request.time > resource.data.lastSent + duration.time(0, 0, 30, 0);
+      allow delete: if false;
+    }
+
+    match /messages/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'recipientUid', 'recipientUsername', 'body', 'anonymous',
+          'sessionId', 'threadSecret', 'status', 'read', 'reaction', 'createdAt'
+        ])
+        && request.resource.data.anonymous == true
+        && request.resource.data.body is string
+        && request.resource.data.body.size() > 0
+        && request.resource.data.body.size() <= 2000
+        && request.resource.data.recipientUid is string
+        && request.resource.data.recipientUid.size() >= 20
+        && exists(/databases/$(database)/documents/users/$(request.resource.data.recipientUid))
+        && get(/databases/$(database)/documents/users/$(request.resource.data.recipientUid)).data.inboxOpen != false
+        && request.resource.data.status == 'delivered'
+        && request.resource.data.read == false
+        && request.resource.data.reaction == null
+        && request.resource.data.createdAt == request.time
+        && validSecret(request.resource.data.threadSecret)
+        && (!('recipientUsername' in request.resource.data)
+            || request.resource.data.recipientUsername == null
+            || (request.resource.data.recipientUsername is string
+                && request.resource.data.recipientUsername.size() <= 24))
+        && (!('sessionId' in request.resource.data)
+            || request.resource.data.sessionId == null
+            || (request.resource.data.sessionId is string
+                && request.resource.data.sessionId.size() <= 64))
+        && getAfter(/databases/$(database)/documents/rateLimits/$(request.auth.uid)).data.lastSent
+             == request.time
+        && getAfter(/databases/$(database)/documents/threads/$(request.resource.data.threadSecret)).data.recipientUid
+             == request.resource.data.recipientUid
+        && getAfter(/databases/$(database)/documents/threads/$(request.resource.data.threadSecret)).data.creatorUid
+             == request.auth.uid;
+      allow read: if signedIn() && resource.data.recipientUid == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.recipientUid == request.auth.uid
+        && request.resource.data.recipientUid == resource.data.recipientUid
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['read', 'reaction', 'status', 'body'])
+        && (!('reaction' in request.resource.data)
+            || request.resource.data.reaction == null
+            || request.resource.data.reaction in ['❤️', '😂', '👍', '😮']);
+      allow delete: if signedIn() && resource.data.recipientUid == request.auth.uid;
+    }
+
+    match /threads/{secretId} {
+      allow list: if false;
+      allow get: if signedIn() && (
+        resource.data.recipientUid == request.auth.uid
+        || resource.data.creatorUid == request.auth.uid
+      );
+      allow create: if signedIn()
+        && validSecret(secretId)
+        && request.resource.data.keys().hasOnly([
+          'creatorUid', 'recipientUid', 'messageId', 'status',
+          'mutualReveal', 'revealByRecipient', 'revealBySender',
+          'senderUsername', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.creatorUid == request.auth.uid
+        && request.resource.data.recipientUid is string
+        && exists(/databases/$(database)/documents/users/$(request.resource.data.recipientUid))
+        && request.resource.data.mutualReveal == false
+        && request.resource.data.revealByRecipient == false
+        && request.resource.data.revealBySender == false
+        && request.resource.data.senderUsername == null
+        // Must be same batch as rate-limited message
+        && getAfter(/databases/$(database)/documents/rateLimits/$(request.auth.uid)).data.lastSent
+             == request.time;
+      allow update: if signedIn() && (
+          resource.data.recipientUid == request.auth.uid
+          || resource.data.creatorUid == request.auth.uid
+        )
+        && request.resource.data.creatorUid == resource.data.creatorUid
+        && request.resource.data.recipientUid == resource.data.recipientUid
+        && (
+          request.resource.data.revealByRecipient == resource.data.revealByRecipient
+          || (
+            request.auth.uid == resource.data.recipientUid
+            && request.resource.data.revealByRecipient == true
+          )
+        )
+        && (
+          (
+            request.resource.data.revealBySender == resource.data.revealBySender
+            && request.resource.data.senderUsername == resource.data.senderUsername
+          )
+          || (
+            request.auth.uid == resource.data.creatorUid
+            && request.resource.data.revealBySender == true
+            && request.resource.data.senderUsername is string
+            && validUsername(request.resource.data.senderUsername)
+            && exists(/databases/$(database)/documents/publicProfiles/$(request.resource.data.senderUsername))
+            && get(/databases/$(database)/documents/publicProfiles/$(request.resource.data.senderUsername)).data.uid
+                 == request.auth.uid
+          )
+        )
+        && (
+          request.resource.data.mutualReveal == false
+          || (
+            request.resource.data.revealByRecipient == true
+            && request.resource.data.revealBySender == true
+          )
+        );
+      match /messages/{mid} {
+        allow read: if signedIn() && (
+          get(/databases/$(database)/documents/threads/$(secretId)).data.recipientUid == request.auth.uid
+          || get(/databases/$(database)/documents/threads/$(secretId)).data.creatorUid == request.auth.uid
+        );
+        // getAfter: parent thread may be created in the same batch as the first message
+        allow create: if signedIn()
+        && (
+          getAfter(/databases/$(database)/documents/threads/$(secretId)).data.recipientUid == request.auth.uid
+          || getAfter(/databases/$(database)/documents/threads/$(secretId)).data.creatorUid == request.auth.uid
+        )
+        && request.resource.data.keys().hasOnly(['body', 'authorUid', 'createdAt'])
+        && request.resource.data.body is string
+        && request.resource.data.body.size() > 0
+        && request.resource.data.body.size() <= 2000
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      }
+    }
+
+    // conversations disabled on Spark (use message.threadSecret)
+    match /conversations/{id} {
+      allow read, write: if false;
+    }
+
+    match /reports/{id} {
+      allow create: if signedIn()
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'reporterUid', 'targetType', 'targetId', 'reason', 'messageBody', 'createdAt', 'status'
+        ])
+        && request.resource.data.status == 'open'
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() <= 500
+        && request.resource.data.targetType is string
+        && request.resource.data.targetType.size() <= 32
+        && request.resource.data.targetId is string
+        && request.resource.data.targetId.size() <= 128
+        && (!('messageBody' in request.resource.data)
+            || (request.resource.data.messageBody is string
+                && request.resource.data.messageBody.size() <= 2000));
+      allow read, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /appeals/{id} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'body', 'createdAt', 'status'])
+        && request.resource.data.status == 'open'
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 2000;
+      allow read, update: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    match /blocks/{id} {
+      allow read, write: if signedIn() && (
+        (resource == null && request.resource.data.blockerUid == request.auth.uid)
+        || (resource != null && resource.data.blockerUid == request.auth.uid)
+      );
+    }
+
+    match /feedPosts/{id} { allow read, write: if false; }
+    match /circles/{id} { allow read, write: if false; }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

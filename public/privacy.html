@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kebijakan Privasi — anonmsg</title>
+  <link rel="stylesheet" href="/styles/tokens/tokens.css" />
+  <link rel="stylesheet" href="/styles/foundation/base.css" />
+  <link rel="stylesheet" href="/styles/layouts/shell.css" />
+</head>
+<body>
+  <main class="content" style="max-width:640px;margin:32px auto;line-height:1.65;color:var(--text-2)">
+    <h1 style="color:var(--text)">Kebijakan Privasi (draf)</h1>
+    <p><em>Draf informasi, bukan nasihat hukum.</em></p>
+    <h2 style="color:var(--text);margin-top:24px;font-size:1.1rem">Anonim bagi penerima</h2>
+    <p>Penerima tidak melihat email atau nama akun pengirim di inbox. Pesan dikirim lewat sesi Firebase Anonymous terpisah (bukan akun permanen yang sedang login).</p>
+    <h2 style="color:var(--text);margin-top:24px;font-size:1.1rem">Yang tetap tersimpan di server</h2>
+    <ul>
+      <li>UID Firebase Anonymous pengirim pada dokumen thread (<code>creatorUid</code>) dan pesan thread (<code>authorUid</code>) — diperlukan agar rules mengizinkan chat 2 arah.</li>
+      <li>Operator project dapat melihat UID di Console; memetakan UID anonim ke identitas dunia nyata biasanya tidak langsung, tetapi bukan jaminan absolut.</li>
+      <li><code>sessionId</code> di perangkat pengirim dapat mengorelasikan beberapa pesan dari browser yang sama.</li>
+      <li>UID Anonymous pada <code>threads.creatorUid</code> stabil selama sesi browser/app pengirim belum di-reset, sehingga beberapa thread dari perangkat yang sama dapat dikorelasikan (termasuk antar penerima yang berbagi data).</li>
+    </ul>
+    <h2 style="color:var(--text);margin-top:24px;font-size:1.1rem">Analytics</h2>
+    <p>Firebase Analytics tidak diaktifkan di build ini.</p>
+    <p style="margin-top:32px"><a href="index.html">← Kembali</a> · <a href="terms.html">Syarat</a></p>
+  </main>
+</body>
+</html>
