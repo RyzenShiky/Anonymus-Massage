@@ -103,11 +103,12 @@ import "../firebase/app.js";
       const profile = getProfile();
       view.innerHTML = `
         <h1 class="page-title">Inbox</h1>
+        <p class="page-sub">Pesan anonim yang masuk ke akunmu</p>
         <div class="filter-row">
-          <button class="chip ${filter==="all"?"active":""}" data-f="all">All</button>
-          <button class="chip ${filter==="unread"?"active":""}" data-f="unread">Unread</button>
+          <button class="chip ${filter==="all"?"active":""}" data-f="all">Semua</button>
+          <button class="chip ${filter==="unread"?"active":""}" data-f="unread">Belum dibaca</button>
         </div>
-        <div id="list"><div class="empty-state"><p>Loading…</p></div></div>`;
+        <div id="list"><div class="empty-state"><p>Memuat…</p></div></div>`;
       view.querySelectorAll("[data-f]").forEach((b) => {
         b.addEventListener("click", () => { filter = b.dataset.f; renderInbox(); });
       });
@@ -120,7 +121,13 @@ import "../firebase/app.js";
         let rows = items.filter((m) => m.status !== "deleted");
         if (filter === "unread") rows = rows.filter((m) => !m.read);
         if (!rows.length) {
-          list.innerHTML = `<div class="empty-state"><h3>No messages yet</h3><p>Share your link to receive anonymous messages.</p></div>`;
+          list.innerHTML = `<div class="empty-state">
+          <div class="empty-icon">📥</div>
+          <h3>Inbox kosong</h3>
+          <p>Bagikan link profilmu agar orang bisa mengirim pesan anonim.</p>
+          <button class="btn btn-primary btn-sm" id="go-link" type="button" style="margin-top:16px">Salin link saya</button>
+        </div>`;
+        document.getElementById("go-link")?.addEventListener("click", () => { location.hash = "link"; });
           return;
         }
         list.innerHTML = rows.map((m) => {
@@ -202,17 +209,18 @@ import "../firebase/app.js";
       const link = publicLink(p.username);
       view.innerHTML = `
         <h1 class="page-title">My link</h1>
-        <div class="card"><div class="card-body">
-          <p style="color:var(--text-2);margin-bottom:12px">Share this link. Anyone can message you anonymously.</p>
+        <p class="page-sub">Bagikan link ini. Siapa pun bisa mengirim pesan anonim.</p>
+        <div class="card section-card"><div class="card-body">
+          <h2>Link publik</h2>
           <div class="link-box">
             <input class="input" id="link" readonly value="${link}" />
-            <button class="btn btn-primary" id="copy" type="button">Copy</button>
+            <button class="btn btn-primary" id="copy" type="button">Salin</button>
           </div>
-          <p style="margin-top:16px;font-size:0.85rem;color:var(--text-3)">Preview: <a href="u.html?u=${p.username}" style="color:var(--accent)">u.html?u=${p.username}</a></p>
+          <p class="muted" style="margin-top:14px">Pratinjau: <a href="u.html?u=${encodeURIComponent(p.username)}" style="color:var(--accent)">u.html?u=${p.username}</a></p>
         </div></div>`;
       document.getElementById("copy").addEventListener("click", async () => {
         await navigator.clipboard.writeText(link);
-        toast("Link copied");
+        toast("Link disalin");
       });
     }
 
@@ -220,14 +228,20 @@ import "../firebase/app.js";
       const p = getProfile();
       view.innerHTML = `
         <h1 class="page-title">Settings</h1>
-        <div class="card"><div class="card-body">
+        <p class="page-sub">Profil dan preferensi akun</p>
+        <div class="card section-card"><div class="card-body">
+          <h2>Profil</h2>
           <div class="form-group"><label>Display name</label><input class="input" id="dn" value="${escapeAttr(p.displayName || "")}" /></div>
           <div class="form-group"><label>Bio</label><input class="input" id="bio" value="${escapeAttr(p.bio || "")}" /></div>
           <div class="form-group">
-            <label><input type="checkbox" id="open" ${p.inboxOpen !== false ? "checked" : ""} /> Inbox open</label>
+            <label style="display:flex;align-items:center;gap:8px;font-weight:500">
+              <input type="checkbox" id="open" ${p.inboxOpen !== false ? "checked" : ""} /> Inbox terbuka
+            </label>
           </div>
-          <button class="btn btn-primary" id="save">Save</button>
-          <button class="btn btn-secondary" id="notif" type="button" style="margin-left:8px">Enable notifications</button>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+          <button class="btn btn-primary" id="save">Simpan</button>
+          <button class="btn btn-secondary" id="notif" type="button">Notifikasi</button>
+          </div>
           <div id="guest-link" style="margin-top:16px;display:none">
             <p style="font-size:0.85rem;color:var(--text-2);margin-bottom:8px">Guest account — link email to keep this inbox permanently.</p>
             <button class="btn btn-secondary btn-sm" id="link-email" type="button">Link email &amp; password</button>
@@ -270,17 +284,17 @@ import "../firebase/app.js";
 
     function renderSafety() {
       view.innerHTML = `
-        <h1 class="page-title">Safety Center</h1>
-        <div class="card"><div class="card-body">
-          <p style="color:var(--text-2);margin-bottom:12px">We don't sell anonymity. Block, report, and filters protect your inbox.</p>
-          <ul style="color:var(--text-2);font-size:0.9rem;line-height:1.8">
-            <li>• Local pre-filter (bypassable — server must enforce)</li>
-            <li>• Report to Firestore <code>reports</code> collection</li>
-            <li>• Pause inbox in Settings</li>
-            <li>• Hard-delete removes message document</li>
-            <li>• Full moderation queue needs deployed Cloud Functions</li>
-            <li>• Threads: pengirim pakai /public/my-sends.html; secret di perangkat</li>
+        <h1 class="page-title">Safety</h1>
+        <p class="page-sub">Kami tidak menjual identitas. Lindungi inboxmu dengan fitur di bawah.</p>
+        <div class="card section-card"><div class="card-body">
+          <ul style="color:var(--text-2);font-size:0.9rem;line-height:1.85;padding-left:0">
+            <li style="margin-bottom:8px">• Filter lokal saat mengirim (bisa dilewati — App Check + rules adalah pagar utama)</li>
+            <li style="margin-bottom:8px">• <strong>Report</strong> dari kartu pesan di Inbox</li>
+            <li style="margin-bottom:8px">• Jeda inbox di Settings</li>
+            <li style="margin-bottom:8px">• Hapus pesan secara permanen dari Inbox</li>
+            <li style="margin-bottom:8px">• Chat: penerima dari Inbox · pengirim lewat <a href="my-sends.html" style="color:var(--accent)">My sent threads</a></li>
           </ul>
+          <p class="muted" style="margin-top:16px"><a href="privacy.html" style="color:var(--accent)">Privasi</a> · <a href="terms.html" style="color:var(--accent)">Syarat</a></p>
         </div></div>`;
     }
 
@@ -301,10 +315,8 @@ import "../firebase/app.js";
     function renderConversations() {
       if (unsubInbox) { unsubInbox(); unsubInbox = null; }
       view.innerHTML = `<h1 class="page-title">Chats</h1>
-        <p style="font-size:0.8rem;color:var(--text-3);margin-bottom:12px">
-          Dari pesan yang punya thread. Pengirim: <a href="my-sends.html" style="color:var(--accent)">My sent threads</a>
-        </p>
-        <div id="clist"><p class="empty-state">Loading…</p></div>`;
+        <p class="page-sub">Percakapan dari pesan yang dilanjutkan. Pengirim: <a href="my-sends.html">My sent threads</a></p>
+        <div id="clist"><div class="empty-state"><p>Memuat…</p></div></div>`;
       const list = document.getElementById("clist");
       unsubInbox = watchInbox(getUser().uid, (err, items) => {
         if (err) {
@@ -314,7 +326,11 @@ import "../firebase/app.js";
         }
         const rows = items.filter((m) => m.threadSecret && m.status !== "deleted");
         if (!rows.length) {
-          list.innerHTML = `<div class="empty-state"><h3>No threads yet</h3><p>Open a message and use Continue chat.</p></div>`;
+          list.innerHTML = `<div class="empty-state">
+            <div class="empty-icon">💬</div>
+            <h3>Belum ada chat</h3>
+            <p>Buka Inbox, pilih pesan, lalu ketuk <strong>Continue chat</strong> untuk membalas secara anonim.</p>
+          </div>`;
           return;
         }
         list.replaceChildren();
@@ -328,10 +344,13 @@ import "../firebase/app.js";
           body.className = "msg-body";
           body.textContent = (m.body || "").slice(0, 120);
           const btn = document.createElement("button");
+          const actions = document.createElement("div");
+          actions.className = "msg-actions";
           btn.className = "btn btn-sm btn-primary";
-          btn.textContent = "Open";
+          btn.textContent = "Buka chat";
           btn.onclick = () => openThread(m.threadSecret);
-          card.append(meta, body, btn);
+          actions.appendChild(btn);
+          card.append(meta, body, actions);
           list.appendChild(card);
         });
       });
@@ -341,14 +360,13 @@ import "../firebase/app.js";
     function openThread(secret) {
       if (typeof unsubMsgs !== "undefined" && unsubMsgs) try { unsubMsgs(); } catch (_) {}
       view.innerHTML = `
-        <button class="btn btn-ghost btn-sm" id="back-chats">← Chats</button>
-        <h1 class="page-title" style="margin-top:8px">Anonymous thread</h1>
-        <p class="muted" style="font-size:0.8rem;color:var(--text-3);margin-bottom:8px">Secret: ${secret.slice(0,8)}… (capability URL)</p>
-        <div id="msgs" style="min-height:200px;margin-bottom:12px"></div>
-        <div class="card"><div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap">
-          <input class="input" id="cbody" placeholder="Message…" style="flex:1;min-width:140px" />
-          <button class="btn btn-primary" id="csend">Send</button>
-          
+        <button class="btn btn-ghost btn-sm" id="back-chats" type="button">← Kembali</button>
+        <h1 class="page-title" style="margin-top:12px">Chat anonim</h1>
+        <p class="page-sub">Balasan tetap anonim bagi lawan bicara.</p>
+        <div id="msgs" style="min-height:220px;margin-bottom:16px"></div>
+        <div class="card"><div class="card-body chat-composer">
+          <input class="input" id="cbody" placeholder="Tulis balasan…" autocomplete="off" />
+          <button class="btn btn-primary" id="csend" type="button">Kirim</button>
         </div></div>`;
       document.getElementById("back-chats").onclick = () => { location.hash = "conversations"; };
       const box = document.getElementById("msgs");
@@ -356,9 +374,9 @@ import "../firebase/app.js";
         if (err) { box.innerHTML = `<p>${err.message}</p>`; return; }
         box.innerHTML = items.map((m) => `
           <div class="card msg-card" style="margin-bottom:8px">
-            <div class="msg-meta"><span class="badge badge-anon">${m.authorUid === getUser().uid ? "You" : "Them"}</span></div>
+            <div class="msg-meta"><span class="badge ${m.authorUid === getUser().uid ? "badge-accent" : "badge-anon"}">${m.authorUid === getUser().uid ? "Kamu" : "Anonim"}</span></div>
             <div class="msg-body">${escapeHtml(m.body || "")}</div>
-          </div>`).join("") || `<p class="empty-state">No messages yet</p>`;
+          </div>`).join("") || `<div class="empty-state"><div class="empty-icon">✉️</div><h3>Belum ada balasan</h3><p>Kirim pesan pertama di bawah.</p></div>`;
       });
       document.getElementById("csend").onclick = async () => {
         try {
