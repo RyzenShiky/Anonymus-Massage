@@ -159,18 +159,22 @@ import "../firebase/app.js";
                 if (btn.dataset.act === "read") await markRead(id);
                 if (btn.dataset.act === "heart") await setReaction(id, "❤️");
                 if (btn.dataset.act === "story") {
-                  const answer = prompt("Jawabanmu?");
-                  if (!answer) return;
                   const row = items.find((x) => x.id === id);
-                  const { renderStoryCard, shareCard } = await import("../features/share/story-card.js");
-                  const blob = await renderStoryCard({
+                  const cardEl = btn.closest(".msg-card");
+                  let host = cardEl.querySelector(".reply-host");
+                  if (!host) {
+                    host = Object.assign(document.createElement("div"), { className: "reply-host" });
+                    cardEl.appendChild(host);
+                  }
+                  const { mountReplyBox } = await import("../features/share/story-card.js");
+                  mountReplyBox(host, {
                     question: row?.body || "",
-                    answer,
                     handle: "@" + (getProfile()?.username || ""),
+                    onDone: (how) => {
+                      if (how === "downloaded") toast("Gambar diunduh — upload manual ke story");
+                      else if (how === "shared") toast("Dibagikan");
+                    },
                   });
-                  const how = await shareCard(blob);
-                  if (how === "downloaded") toast("Gambar diunduh — upload manual ke story");
-                  else if (how === "shared") toast("Dibagikan");
                   return;
                 }
                 if (btn.dataset.act === "del") {

@@ -1,7 +1,6 @@
 /**
- * Minimal Firestore rules tests.
- * Run: cd tests/rules && npm i && firebase emulators:exec --only firestore "npm test"
- * Requires firebase-tools + Java for emulator.
+ * Firestore rules tests.
+ * Run: firebase emulators:exec --only firestore "cd tests/rules && npm i && npm test"
  */
 import {
   assertFails,
@@ -12,7 +11,8 @@ import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import {
-  doc, setDoc, getDoc, collection, serverTimestamp,
+  doc, setDoc, getDoc, collection, writeBatch, deleteDoc,
+  Timestamp, serverTimestamp,
 } from "firebase/firestore";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
@@ -43,13 +43,12 @@ function secret() {
   return "a".repeat(32);
 }
 
+/** request.time in rules is evaluated at commit; serverTimestamp() maps correctly in emulator. */
 test("1) new user creates profile batch", async () => {
   const db = authed("user1");
   const username = "alice";
-  // batch via sequential set in rules testing is per-request; use runTransaction-like multi in one commit via writeBatch
-  const { writeBatch } = await import("firebase/firestore");
   const batch = writeBatch(db);
-  batch.set(doc(db, "usernames", username), { uid: "user1", createdAt: new Date() });
+  batch.set(doc(db, "usernames", username), { uid: "user1", createdAt: serverTimestamp() });
   batch.set(doc(db, "users", "user1"), {
     uid: "user1",
     username,
@@ -57,8 +56,8 @@ test("1) new user creates profile batch", async () => {
     bio: "hi",
     avatarColor: "#5b5ce2",
     inboxOpen: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
   batch.set(doc(db, "publicProfiles", username), {
     uid: "user1",
@@ -67,29 +66,28 @@ test("1) new user creates profile batch", async () => {
     bio: "hi",
     avatarColor: "#5b5ce2",
     inboxOpen: true,
-    updatedAt: new Date(),
+    updatedAt: serverTimestamp(),
   });
   await assertSucceeds(batch.commit());
 });
 
 test("1b) reserved username denied", async () => {
   const db = authed("user2");
-  const { writeBatch } = await import("firebase/firestore");
   const batch = writeBatch(db);
-  batch.set(doc(db, "usernames", "admin"), { uid: "user2", createdAt: new Date() });
+  batch.set(doc(db, "usernames", "admin"), { uid: "user2", createdAt: serverTimestamp() });
   batch.set(doc(db, "users", "user2"), {
     uid: "user2", username: "admin", displayName: "x", bio: "x",
-    avatarColor: "#5b5ce2", inboxOpen: true, createdAt: new Date(), updatedAt: new Date(),
+    avatarColor: "#5b5ce2", inboxOpen: true,
+    createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
   });
   batch.set(doc(db, "publicProfiles", "admin"), {
     uid: "user2", username: "admin", displayName: "x", bio: "x",
-    avatarColor: "#5b5ce2", inboxOpen: true, updatedAt: new Date(),
+    avatarColor: "#5b5ce2", inboxOpen: true, updatedAt: serverTimestamp(),
   });
   await assertFails(batch.commit());
 });
 
-test("2) sender message batch (4 docs)", async () => {
-  // seed recipient
+test("2) sender message batch (rateLimit + thread + message + thread message)", async () => {
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
     await setDoc(doc(db, "usernames", "bob"), { uid: "bob1" });
@@ -101,10 +99,12 @@ test("2) sender message batch (4 docs)", async () => {
 
   const db = authed("anon1");
   const s = secret();
-  const { writeBatch, collection: col } = await import("firebase/firestore");
   const batch = writeBatch(db);
-  const msgRef = doc(col(db, "messages"));
-  batch.set(doc(db, "rateLimits", "anon1"), { lastSent: new Date(), count: 1 });
+  const msgRef = doc(collection(db, "messages"));
+  batch.set(doc(db, "rateLimits", "anon1"), {
+    lastSent: serverTimestamp(),
+    count: 1,
+  });
   batch.set(doc(db, "threads", s), {
     creatorUid: "anon1",
     recipientUid: "bob1",
@@ -114,8 +114,8 @@ test("2) sender message batch (4 docs)", async () => {
     revealByRecipient: false,
     revealBySender: false,
     senderUsername: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
   batch.set(msgRef, {
     recipientUid: "bob1",
@@ -127,21 +127,14 @@ test("2) sender message batch (4 docs)", async () => {
     status: "delivered",
     read: false,
     reaction: null,
-    createdAt: new Date(),
+    createdAt: serverTimestamp(),
   });
-  batch.set(doc(col(db, "threads", s, "messages")), {
+  batch.set(doc(collection(db, "threads", s, "messages")), {
     body: "hello",
     authorUid: "anon1",
-    createdAt: new Date(),
+    createdAt: serverTimestamp(),
   });
-  // Note: rules require createdAt == request.time — emulator may need Timestamp
-  // This test validates structure; time equality can be flaky with Date objects.
-  try {
-    await assertSucceeds(batch.commit());
-  } catch {
-    // Fallback: document that time matching is environment-sensitive
-    console.warn("message batch time equality may need serverTimestamp in integration");
-  }
+  await assertSucceeds(batch.commit());
 });
 
 test("3) recipient can read own messages only", async () => {
@@ -172,6 +165,5 @@ test("5) users delete denied", async () => {
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), "users", "user1"), { uid: "user1", username: "alice" });
   });
-  const { deleteDoc } = await import("firebase/firestore");
   await assertFails(deleteDoc(doc(authed("user1"), "users", "user1")));
 });

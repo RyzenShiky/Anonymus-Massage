@@ -82,3 +82,44 @@ export async function shareCard(blob) {
   setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   return "downloaded";
 }
+
+
+/** Inline reply + pre-render story so share keeps user activation. */
+export function mountReplyBox(host, { question, handle, onDone }) {
+  host.innerHTML = `
+    <div class="reply-box">
+      <textarea class="textarea" rows="3" maxlength="280" placeholder="Tulis jawabanmu…"></textarea>
+      <div class="reply-actions">
+        <button class="btn btn-primary btn-sm" type="button" disabled>Bagikan ke story</button>
+      </div>
+    </div>`;
+  const input = host.querySelector("textarea");
+  const send = host.querySelector("button");
+  let blob = null;
+  let timer;
+
+  input.addEventListener("input", () => {
+    send.disabled = true;
+    blob = null;
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const answer = input.value.trim();
+      if (!answer) return;
+      try {
+        blob = await renderStoryCard({ question, answer, handle });
+        send.disabled = !blob;
+      } catch (e) {
+        console.warn(e);
+        send.disabled = true;
+      }
+    }, 300);
+  });
+
+  send.addEventListener("click", async () => {
+    if (!blob) return;
+    const how = await shareCard(blob);
+    onDone?.(how);
+  });
+
+  input.focus();
+}
