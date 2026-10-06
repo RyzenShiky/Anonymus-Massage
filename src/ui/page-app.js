@@ -10,14 +10,27 @@ import "../firebase/app.js";
     
     import { requestNotificationPermission } from "../infrastructure/notifications/fcm.client.js";
     import { initAppCheckStub } from "../infrastructure/app-check/app-check.client.js";
-    initAppCheckStub();
+    try { initAppCheckStub(); } catch (e) { console.warn("app-check", e); }
 
-    initSession();
     const view = document.getElementById("view");
+    if (view) {
+      view.innerHTML = `<div class="empty-state"><p>Loading session…</p></div>`;
+    }
     let unsubInbox = null;
     let filter = "all";
+    let booted = false;
 
-    whenReady().then(({ user, profile }) => {
+    function showBootError(msg) {
+      console.error(msg);
+      if (view) {
+        view.innerHTML = `<div class="empty-state"><h3>Gagal memuat</h3><p style="color:var(--danger);word-break:break-word"></p>
+          <p style="margin-top:12px;font-size:0.85rem;color:var(--text-3)">Buka F12 → Console untuk detail. Cek juga Auth Anonymous &amp; Firestore index.</p></div>`;
+        view.querySelector("p").textContent = String(msg);
+      }
+    }
+
+    function boot({ user, profile }) {
+      if (booted) return;
       if (!user) {
         location.href = "login.html";
         return;
@@ -26,14 +39,37 @@ import "../firebase/app.js";
         location.href = "onboarding.html";
         return;
       }
-      document.getElementById("me-avatar").textContent = (profile.displayName || profile.username).charAt(0).toUpperCase();
-      route();
-    });
-    onSession((user, profile) => {
-      if (!user) return; // ignore until ready handled
-      if (profile?.username) {
-        document.getElementById("me-avatar").textContent = (profile.displayName || profile.username).charAt(0).toUpperCase();
+      booted = true;
+      const letter = (profile.displayName || profile.username || "?").charAt(0).toUpperCase();
+      const av = document.getElementById("me-avatar");
+      if (av) av.textContent = letter;
+      try {
+        route();
+      } catch (e) {
+        showBootError(e.message || e);
       }
+    }
+
+    try {
+      initSession();
+      whenReady()
+        .then(boot)
+        .catch((e) => showBootError(e.message || e));
+      // Fallback if auth is slow
+      setTimeout(() => {
+        if (!booted && view && view.textContent.includes("Loading session")) {
+          showBootError("Session timeout — refresh atau login ulang");
+        }
+      }, 15000);
+    } catch (e) {
+      showBootError(e.message || e);
+    }
+
+    onSession((user, profile) => {
+      if (!user || !profile?.username) return;
+      const av = document.getElementById("me-avatar");
+      if (av) av.textContent = (profile.displayName || profile.username).charAt(0).toUpperCase();
+      if (!booted) boot({ user, profile });
     });
 
     function setActive(name) {
@@ -43,15 +79,23 @@ import "../firebase/app.js";
     }
 
     function route() {
-      const hash = (location.hash || "#inbox").slice(1);
-      setActive(hash);
-      if (unsubInbox) { unsubInbox(); unsubInbox = null; }
-      if (hash === "link") renderLink();
-      else if (hash === "settings") renderSettings();
-      else if (hash === "safety") renderSafety();
-      else if (hash === "conversations") renderConversations();
-      else if (hash === "link") renderLink();
-      else renderInbox();
+      const hash = (location.hash || "#inbox").replace(/^#/, "").slice(0) || "inbox";
+      const name = hash.split("?")[0] || "inbox";
+      setActive(name);
+      if (unsubInbox) { try { unsubInbox(); } catch (_) {} unsubInbox = null; }
+      try {
+        if (name === "link") renderLink();
+        else if (name === "settings") renderSettings();
+        else if (name === "safety") renderSafety();
+        else if (name === "conversations") renderConversations();
+        else renderInbox();
+      } catch (e) {
+        console.error(e);
+        if (view) {
+          view.innerHTML = `<div class="empty-state"><h3>Error</h3><p></p></div>`;
+          view.querySelector("p").textContent = e.message || String(e);
+        }
+      }
     }
     window.addEventListener("hashchange", route);
 
