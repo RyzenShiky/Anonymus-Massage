@@ -110,5 +110,13 @@ import "../firebase/app.js"; // App Check init
       }
     } catch (e) {
       console.error(e);
-      showEmpty("Could not load profile", e.message || "Permission or network error");
+      showEmpty(
+        "Gagal memuat profil",
+        navigator.onLine ? "Koneksi ke server bermasalah. Coba lagi sebentar." : "Kamu sedang offline."
+      );
+      const retry = document.createElement("button");
+      retry.className = "btn btn-secondary";
+      retry.textContent = "Coba lagi";
+      retry.onclick = () => location.reload();
+      main.querySelector(".empty-state")?.appendChild(retry);
     }

@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { initializeFirestore } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { firebaseConfig } from "../core/config/firebase.config.js";
 import { RECAPTCHA_SITE_KEY } from "../core/config/app-check.config.js";
 
@@ -27,8 +27,10 @@ export function getSenderAuth() {
   return getAuth(getSenderApp());
 }
 
+let senderDb;
 export function getSenderDb() {
-  return getFirestore(getSenderApp());
+  senderDb ??= initializeFirestore(getSenderApp(), { experimentalAutoDetectLongPolling: true });
+  return senderDb;
 }
 
 export async function ensureSenderAnonymous() {

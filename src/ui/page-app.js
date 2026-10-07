@@ -4,6 +4,7 @@ import "../firebase/app.js";
     import { reportContent } from "../safety/reporting/report.service.js";
     import { publicLink, createOrUpdateProfile } from "../features/profile/profile.service.js";
     import { toast } from "../core/utilities/toast.js";
+    import { handleInboxSnapshot, enableAlerts } from "../features/messages/inbox-alerts.js";
     // conversations index disabled — use message.threadSecret
     import { watchThreadMessages, sendThreadMessage } from "../features/conversations/thread.service.js";
         
@@ -40,6 +41,12 @@ import "../firebase/app.js";
         return;
       }
       booted = true;
+      try {
+        watchInbox(user.uid, (err, items) => {
+          if (!err) handleInboxSnapshot(items, { onNew: (n) => toast(`${n} pesan anonim baru`) });
+        });
+      } catch (e) { console.warn("inbox alerts", e); }
+
       const letter = (profile.displayName || profile.username || "?").charAt(0).toUpperCase();
       const av = document.getElementById("me-avatar");
       if (av) av.textContent = letter;
@@ -246,15 +253,24 @@ import "../firebase/app.js";
           <button class="btn btn-primary" id="save">Simpan</button>
           <button class="btn btn-secondary" id="notif" type="button">Notifikasi</button>
           </div>
+          <p style="margin-top:16px;font-size:0.8rem">
+            <a href="privacy.html" style="color:var(--accent)">Privacy</a> ·
+            <a href="#safety" style="color:var(--accent)">Safety</a> ·
+            <a href="#" id="logout-m" style="color:var(--danger)">Log out</a>
+          </p>
           <div id="guest-link" style="margin-top:16px;display:none">
             <p style="font-size:0.85rem;color:var(--text-2);margin-bottom:8px">Guest account — link email to keep this inbox permanently.</p>
             <button class="btn btn-secondary btn-sm" id="link-email" type="button">Link email &amp; password</button>
           </div>
           <p style="margin-top:16px;font-size:0.8rem"><a href="privacy.html" style="color:var(--accent)">Privacy</a></p>
         </div></div>`;
+      document.getElementById("logout-m")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        document.getElementById("logout")?.click();
+      });
       document.getElementById("notif")?.addEventListener("click", async () => {
-        const r = await requestNotificationPermission();
-        toast(r.ok ? "Notifications enabled" : "Permission: " + (r.permission || r.reason));
+        const r = await enableAlerts();
+        toast(r.ok ? "Notifikasi aktif (selama app terbuka)" : "Izin: " + (r.permission || r.reason));
       });
       document.getElementById("link-email")?.addEventListener("click", async () => {
         const email = prompt("Email to link");

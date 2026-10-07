@@ -339,8 +339,14 @@
 /* Tighter desktop app shell — less empty space */
 @media (min-width: 900px) {
   .main-wrap { max-width: 920px; }
-  .sidebar   { width: 190px; gap: 4px; }
-  .content   { margin: 0; max-width: 640px; }
+  .sidebar {
+    width: 190px;
+    gap: 4px;
+    position: sticky;
+    top: var(--nav-h);
+    height: calc(100dvh - var(--nav-h));
+  }
+  .main-wrap .content { margin: 0; max-width: 640px; }
 }
 
 .reply-host {
@@ -356,4 +362,18 @@
   display: flex;
   justify-content: flex-end;
   margin-top: 8px;
+}
+
+/* Phone & tablet polish */
+.bottom-nav { height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)); }
+.toast-host { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 20px); }
+
+@media (pointer: coarse) {
+  .btn-sm, .chip { min-height: 44px; }
+  .reply-box .textarea, .link-box input { font-size: 16px; }
+}
+
+@media (max-width: 380px) {
+  .content { padding: var(--space-4) var(--space-3); }
+  .msg-actions .btn { flex: 1 1 auto; }
 }
